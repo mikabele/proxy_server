@@ -253,23 +253,39 @@ import threading
 import time
 import requests
 
-def create_get_query(city:str):
+api_key = "7e47aaf7a09ef12d041a22ab370175d0"
 
 
+def create_get_query(city: str):
+    params = dict(key=api_key, query=city)
+    print(params)
+    req = requests.get("http://api.weatherstack.com/current", params=params)
+    print(req.text)
+    return req.text
 
-def process_client_query(client_socket, client_address):
+
+def process_client_query(client_socket: socket.socket, client_address):
     with client_socket:
         # while True:
         print('Connected by', client_address)
-        time.sleep(5)
-        city=""
+        # time.sleep(5)
+        city = ""
+        i = 0
         while True:
-            city += client_socket.recv(1024)
-            if not city:
+            data = client_socket.recv(1024)
+            print(data)
+            if not data:
                 break
-        print(city)
-        weather=create_get_query(city)
-        client_socket.recv(weather)
+            city += str(data)
+            print(city)
+            i += 1
+            print(i)
+        params = dict(key=api_key, query=city)
+        print(params)
+        req = requests.get("http://api.weatherstack.com/current", params=params)
+        print(req.text)
+        weather = req.text
+        client_socket.sendall(bytes(weather))
 
 
 # Standard loopback interface address (localhost) If you pass an empty string,
@@ -281,7 +297,29 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
     s.listen(2)
     while True:
-        conn, addr = s.accept()
-        client_thread = threading.Thread(name=addr, target=process_client_query, args=(conn, addr))
-        client_thread.setDaemon(True)
-        client_thread.start()
+        client_socket, client_address = s.accept()
+        # client_thread = threading.Thread(name=addr, target=process_client_query, args=(conn, addr))
+        # client_thread.setDaemon(True)
+        # client_thread.start()
+        with client_socket:
+            # while True:
+            print('Connected by', client_address)
+            # time.sleep(5)
+            city = ""
+            i = 0
+            while True:
+                data = client_socket.recv(1024)
+                print(data)
+                if not data:
+                    break
+                city += str(data)
+                print(city)
+                i += 1
+                print(i)
+                client_socket.sendall(b"Minsk")
+            params = dict(access_key=api_key, query=city[2:-1])
+            print(params)
+            req = requests.get("http://api.weatherstack.com/current", params=params)
+            print(req.text)
+            weather = req.text
+            client_socket.sendall(bytes(weather,encoding="UTF-8"))
