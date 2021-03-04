@@ -251,19 +251,25 @@
 import socket
 import threading
 import time
+import requests
+
+def create_get_query(city:str):
+
 
 
 def process_client_query(client_socket, client_address):
-    with conn:
+    with client_socket:
         # while True:
-        print('Connected by', addr)
+        print('Connected by', client_address)
         time.sleep(5)
+        city=""
         while True:
-            data = conn.recv(1024)
-            if not data:
+            city += client_socket.recv(1024)
+            if not city:
                 break
-            print(data)
-            conn.sendall(data)
+        print(city)
+        weather=create_get_query(city)
+        client_socket.recv(weather)
 
 
 # Standard loopback interface address (localhost) If you pass an empty string,
