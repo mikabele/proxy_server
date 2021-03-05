@@ -29,6 +29,7 @@ def process_client_query(client_socket, client_address):
             city += str(data)
             client_socket.sendall(b"Minsk")
         weather = create_get_query(city[2:-1])
+        print(weather)
         client_socket.sendall(bytes(weather, encoding="UTF-8"))
 
 
