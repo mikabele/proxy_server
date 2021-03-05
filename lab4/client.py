@@ -2,7 +2,7 @@
 
 import socket
 
-HOST = '192.168.0.104'  # The server's hostname or IP address
+HOST = 'localhost'  # The server's hostname or IP address
 PORT = 65432  # The port used by the server
 
 city = input()
