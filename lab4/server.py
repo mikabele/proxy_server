@@ -1,14 +1,27 @@
 import socket
 import threading
 import requests
+import os
+import dotenv
+import configparser
 
 
 class ProxyServer:
-    __api_key = "7e47aaf7a09ef12d041a22ab370175d0"
-    __cache_size = 3
+
+    __api_key: str = None
+    __cache_size: int = None
     __cached_requests: list[tuple[str, int]] = list()
-    __HOST = ''
-    __PORT = 65432
+    __HOST: str = None
+    __PORT: int = None
+
+    def load_settings(self):
+        configs = configparser.ConfigParser()
+        configs.read("Configs/configs.ini")
+        self.__HOST = configs["server"]["host"]
+        self.__PORT = int(configs["server"]["port"])
+        self.__cache_size = int(configs["server"]["cache_size"])
+        dotenv.load_dotenv(".env")
+        self.__api_key = os.environ.get("api_key")
 
     def get_query_result(self, city: str) -> int:
         """
@@ -86,6 +99,9 @@ class ProxyServer:
                                                  args=(client_socket, client_address))
                 client_thread.setDaemon(True)
                 client_thread.start()
+
+    def __init__(self):
+        self.load_settings()
 
 
 if __name__ == "__main__":
