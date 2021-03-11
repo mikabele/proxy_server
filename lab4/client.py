@@ -23,6 +23,9 @@ class Client:
 
             print('Received', repr(data))
 
+    def __init__(self):
+        self.load_settings()
+
 
 if __name__ == "__main__":
     client = Client()
