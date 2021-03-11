@@ -4,13 +4,15 @@ import requests
 import os
 import dotenv
 import configparser
+from concurrent.futures import ThreadPoolExecutor
+import re
 
 
 class ProxyServer:
-
     __api_key: str = None
     __cache_size: int = None
     __cached_requests: list[tuple[str, int]] = list()
+    __threads_pool: ThreadPoolExecutor = None
     __HOST: str = None
     __PORT: int = None
 
@@ -25,22 +27,27 @@ class ProxyServer:
 
     def get_query_result(self, city: str) -> int:
         params = dict(access_key=self.__api_key, query=city)
-        req = requests.get("http://api.weatherstack.com/current", params=params)
-        temperature = eval(req.text)["current"]["temperature"]
+        req = requests.get(url="http://api.weatherstack.com/current", params=params)
+        temperature = req.json()["current"]["temperature"]
         self.cache_request(city, temperature)
         return temperature
 
     def process_client_query(self, client_socket: socket.socket, client_address: str) -> None:
         with client_socket:
-            print('Connected by', client_address)
-            city = str(client_socket.recv(1024))[2:-1]
-            temperature = self.get_cached_request(city)
+            get_request = client_socket.recv(1024).decode("utf-8").split("\n")[0]
+            params_str = get_request.split(" ")[1]
+            func, args = params_str.split("?")
+            func = func[1:]
+            args_dict = dict([pair.split("=") for pair in args.split("&")])
+            temperature = self.get_cached_request(args_dict["city"])
             if not temperature:
                 print("not from cached requests")
-                temperature = self.get_query_result(city)
+                temperature = self.get_query_result(args_dict["city"])
             else:
                 temperature = temperature[1]
-            client_socket.sendall(bytes(str(temperature), encoding="UTF-8"))
+            sending_str = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
+                temperature) + "</body></html>\n"
+            client_socket.sendall(bytes(sending_str, encoding="UTF-8"))
 
     def cache_request(self, requested_place: str, request_info: int) -> None:
         if len(self.__cached_requests) == self.__cache_size:
