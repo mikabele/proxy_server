@@ -29,7 +29,6 @@ class ProxyServer:
     def get_requested_result_from_remote_server(self, city: str) -> dict[str, object]:
         params = dict(access_key=self.__api_key, query=city)
         req = requests.get(url="http://api.weatherstack.com/current", params=params)
-        # print(req.json()["current"])
         return req.json()["current"]
 
     @staticmethod
@@ -69,10 +68,10 @@ class ProxyServer:
     def cache_request(self, request: str, requested_place: str, request_info: object) -> None:
         if len(self.__cached_requests) == self.__cache_size:
             contains_requested_place = False
-            for place, info in self.__cached_requests:
-                if requested_place == place:
+            for cached_request, cached_place, info in self.__cached_requests:
+                if cached_request == request and requested_place == cached_place:
                     contains_requested_place = True
-                    self.__cached_requests.remove((request, place, info))
+                    self.__cached_requests.remove((request, cached_place, info))
                     break
             if not contains_requested_place:
                 del self.__cached_requests[0]
