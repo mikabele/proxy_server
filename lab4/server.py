@@ -6,6 +6,7 @@ import dotenv
 import configparser
 from concurrent.futures import ThreadPoolExecutor
 import re
+import time
 
 
 class ProxyServer:
@@ -13,6 +14,7 @@ class ProxyServer:
     __cache_size: int = None
     __cached_requests: list[tuple[str, int]] = list()
     __threads_pool: ThreadPoolExecutor = None
+    __threads_count: int = None
     __HOST: str = None
     __PORT: int = None
 
@@ -22,6 +24,7 @@ class ProxyServer:
         self.__HOST = configs["server"]["host"]
         self.__PORT = int(configs["server"]["port"])
         self.__cache_size = int(configs["server"]["cache_size"])
+        self.__threads_count = int(configs["server"]["threads_count"])
         dotenv.load_dotenv(".env")
         self.__api_key = os.environ.get("api_key")
 
@@ -39,6 +42,7 @@ class ProxyServer:
             func, args = params_str.split("?")
             func = func[1:]
             args_dict = dict([pair.split("=") for pair in args.split("&")])
+            time.sleep(5)
             temperature = self.get_cached_request(args_dict["city"])
             if not temperature:
                 print("not from cached requests")
@@ -71,15 +75,19 @@ class ProxyServer:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.__HOST, self.__PORT))
             s.listen(2)
-            while True:
-                client_socket, client_address = s.accept()
-                client_thread = threading.Thread(name=client_address, target=self.process_client_query,
-                                                 args=(client_socket, client_address))
-                client_thread.setDaemon(True)
-                client_thread.start()
+            with self.__threads_pool as executor:
+                while True:
+                    client_socket, client_address = s.accept()
+                    # client_thread = threading.Thread(name=client_address, target=self.process_client_query,
+                    #                                  args=(client_socket, client_address))
+                    # client_thread.setDaemon(True)
+                    # client_thread.start()
+                    executor.submit(self.process_client_query, client_socket=client_socket,
+                                    client_address=client_address)
 
     def __init__(self):
         self.load_settings()
+        self.__threads_pool = ThreadPoolExecutor(self.__threads_count)
 
 
 if __name__ == "__main__":
