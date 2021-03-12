@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import LockingList
 import time
 
+
 class ProxyServer:
     __api_key: str = None
     __cache_size: int = None
