@@ -1,32 +1,19 @@
-import socket
-import configparser
+
+from concurrent import futures
+
+import requests
 
 
-class Client:
-    __HOST: str = None
-    __PORT: int = None
+with futures.ThreadPoolExecutor(max_workers=4) as executor:
+    futures = [
+        executor.submit(
+            lambda: requests.get("http://localhost:65432/temperature?city=Moscow"))
+        for _ in range(100)
+    ]
 
-    def load_settings(self):
-        configs = configparser.ConfigParser()
-        configs.read("Configs/configs.ini")
-        self.__HOST = configs["client"]["host"]
-        self.__PORT = int(configs["client"]["port"])
+results = [
+    f.result().status_code
+    for f in futures
+]
 
-    def main(self):
-        city = input()
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.__HOST, self.__PORT))
-            query_str = city.encode("utf-8")
-            s.sendall(query_str)
-            data = s.recv(1024)
-
-            print('Received', repr(data))
-
-    def __init__(self):
-        self.load_settings()
-
-
-if __name__ == "__main__":
-    client = Client()
-    client.main()
+print("Results: %s" % results)
