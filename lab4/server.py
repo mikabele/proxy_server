@@ -25,12 +25,13 @@ class ProxyServer:
         dotenv.load_dotenv(".env")
         self.__api_key = os.environ.get("api_key")
 
-    def get_query_result(self, city: str) -> int:
+    def get_query_result(self, city: str, func: str) -> int:
         params = dict(access_key=self.__api_key, query=city)
         req = requests.get(url="http://api.weatherstack.com/current", params=params)
-        temperature = req.json()["current"]["temperature"]
-        self.cache_request(city, temperature)
-        return temperature
+        print(req.json()["current"])
+        requested_result = req.json()["current"][func]
+        self.cache_request(city, requested_result)
+        return requested_result
 
     def process_client_query(self, client_socket: socket.socket, client_address: str) -> None:
         with client_socket:
@@ -39,14 +40,14 @@ class ProxyServer:
             func, args = params_str.split("?")
             func = func[1:]
             args_dict = dict([pair.split("=") for pair in args.split("&")])
-            temperature = self.get_cached_request(args_dict["city"])
-            if not temperature:
+            requested_result = self.get_cached_request(args_dict["city"])
+            if not requested_result:
                 print("not from cached requests")
-                temperature = self.get_query_result(args_dict["city"])
+                requested_result = self.get_query_result(args_dict["city"], func)
             else:
-                temperature = temperature[1]
+                requested_result = requested_result[1]
             sending_str = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
-                temperature) + "</body></html>\n"
+                requested_result) + "</body></html>\n"
             client_socket.sendall(bytes(sending_str, encoding="UTF-8"))
 
     def cache_request(self, requested_place: str, request_info: int) -> None:
