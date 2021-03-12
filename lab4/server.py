@@ -5,12 +5,13 @@ import dotenv
 import configparser
 from concurrent.futures import ThreadPoolExecutor
 import time
+import LockingList
 
 
 class ProxyServer:
     __api_key: str = None
     __cache_size: int = None
-    __cached_requests: list[tuple[str, str, object]] = None
+    __cached_requests: LockingList.LockingList = None
     __threads_pool: ThreadPoolExecutor = None
     __threads_count: int = None
     __HOST: str = None
@@ -56,7 +57,7 @@ class ProxyServer:
     def process_client_query(self, client_socket: socket.socket, client_address: str) -> None:
         with client_socket:
             request, args = self.get_request_params(client_socket.recv(1024).decode("utf-8"))
-            time.sleep(5)
+            #time.sleep(5)
             requested_result = self.handle_request(request, args)
             client_socket.sendall(bytes(self.get_sending_str(requested_result), encoding="UTF-8"))
 
