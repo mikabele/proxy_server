@@ -6,7 +6,6 @@ import configparser
 from concurrent.futures import ThreadPoolExecutor
 import LockingList
 
-
 class ProxyServer:
     __api_key: str = None
     __cache_size: int = None

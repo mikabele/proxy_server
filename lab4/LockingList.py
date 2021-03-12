@@ -1,9 +1,10 @@
 import threading
-
+import collections
 
 class LockingList:
     items: list[object] = None
     lock_object: threading.Lock = None
+    lock_list=list()
 
     def __init__(self):
         self.items = []
@@ -15,10 +16,6 @@ class LockingList:
     def append(self, item) -> None:
         with self.lock_object:
             self.items.append(item)
-
-    def remove(self, item) -> object:
-        with self.lock_object:
-            return self.items.remove(item)
 
     def remove(self) -> object:
         with self.lock_object:
@@ -36,12 +33,3 @@ class LockingList:
     def __delitem__(self, key) -> bool:
         with self.lock_object:
             return self.__delitem__(key)
-
-    def __len__(self):
-        return len(self.items)
-
-    def __contains__(self, item):
-        return item in self.items
-
-    def __iter__(self):
-        return self.items.__iter__()
