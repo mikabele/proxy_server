@@ -1,18 +1,16 @@
 import socket
-import threading
 import requests
 import os
 import dotenv
 import configparser
 from concurrent.futures import ThreadPoolExecutor
-import re
 import time
 
 
 class ProxyServer:
     __api_key: str = None
     __cache_size: int = None
-    __cached_requests: list[tuple[str, int]] = list()
+    __cached_requests: list[tuple[str, str, object]] = None
     __threads_pool: ThreadPoolExecutor = None
     __threads_count: int = None
     __HOST: str = None
@@ -28,51 +26,64 @@ class ProxyServer:
         dotenv.load_dotenv(".env")
         self.__api_key = os.environ.get("api_key")
 
-    def get_query_result(self, city: str, func: str) -> int:
+    def get_requested_result_from_remote_server(self, city: str) -> dict[str, object]:
         params = dict(access_key=self.__api_key, query=city)
         req = requests.get(url="http://api.weatherstack.com/current", params=params)
-        print(req.json()["current"])
-        requested_result = req.json()["current"][func]
-        self.cache_request(city, requested_result)
+        # print(req.json()["current"])
+        return req.json()["current"]
+
+    @staticmethod
+    def get_request_params(request_str: str) -> tuple[str, dict[str, str]]:
+        get_request = request_str.split("\n")[0]
+        params_str = get_request.split(" ")[1]
+        func, args = params_str.split("?")
+        func = func[1:]
+        args_dict = dict([pair.split("=") for pair in args.split("&")])
+        return func, args_dict
+
+    def handle_request(self, request: str, args: dict[str, str]) -> object:
+        requested_result = self.get_cached_request(request, args["city"])
+        if not requested_result:
+            print("not from cached requests")
+            result_dict = self.get_requested_result_from_remote_server(args["city"])
+            if request not in result_dict:
+                return "Error: invalid request"
+            requested_result = result_dict[request]
+            self.cache_request(request, args["city"], requested_result)
+        else:
+            requested_result = requested_result
         return requested_result
 
     def process_client_query(self, client_socket: socket.socket, client_address: str) -> None:
         with client_socket:
-            get_request = client_socket.recv(1024).decode("utf-8").split("\n")[0]
-            params_str = get_request.split(" ")[1]
-            func, args = params_str.split("?")
-            func = func[1:]
-            args_dict = dict([pair.split("=") for pair in args.split("&")])
+            request, args = self.get_request_params(client_socket.recv(1024).decode("utf-8"))
             time.sleep(5)
-            requested_result = self.get_cached_request(args_dict["city"])
-            if not requested_result:
-                print("not from cached requests")
-                requested_result = self.get_query_result(args_dict["city"], func)
-            else:
-                requested_result = requested_result[1]
-            sending_str = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
-                requested_result) + "</body></html>\n"
-            client_socket.sendall(bytes(sending_str, encoding="UTF-8"))
+            requested_result = self.handle_request(request, args)
+            client_socket.sendall(bytes(self.get_sending_str(requested_result), encoding="UTF-8"))
 
-    def cache_request(self, requested_place: str, request_info: int) -> None:
+    @staticmethod
+    def get_sending_str(requested_result: object) -> str:
+        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
+            requested_result) + "</body></html>\n"
+
+    def cache_request(self, request: str, requested_place: str, request_info: object) -> None:
         if len(self.__cached_requests) == self.__cache_size:
             contains_requested_place = False
             for place, info in self.__cached_requests:
                 if requested_place == place:
                     contains_requested_place = True
-                    self.__cached_requests.remove((place, info))
+                    self.__cached_requests.remove((request, place, info))
                     break
             if not contains_requested_place:
                 del self.__cached_requests[0]
-        self.__cached_requests.append((requested_place, request_info))
+        self.__cached_requests.append((request, requested_place, request_info))
 
-    def get_cached_request(self, requested_place: str):
-        for place, info in self.__cached_requests:
-            if requested_place == place:
-                return place, info
-        return None
+    def get_cached_request(self, request: str, requested_place: str) -> object:
+        for cached_request, place, info in self.__cached_requests:
+            if requested_place == place and cached_request == request:
+                return info
 
-    def connect_to_server(self):
+    def start_server(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.__HOST, self.__PORT))
             s.listen(2)
@@ -85,8 +96,9 @@ class ProxyServer:
     def __init__(self):
         self.load_settings()
         self.__threads_pool = ThreadPoolExecutor(self.__threads_count)
+        self.__cached_requests = list()
 
 
 if __name__ == "__main__":
     proxy = ProxyServer()
-    proxy.connect_to_server()
+    proxy.start_server()
