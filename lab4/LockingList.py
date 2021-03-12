@@ -29,3 +29,7 @@ class LockingList:
 
     def contains(self, item) -> bool:
         return item in self.items
+
+    def __delitem__(self, key) -> bool:
+        with self.lock_object:
+            return self.__delitem__(key)
