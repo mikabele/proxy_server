@@ -13,11 +13,11 @@ class LockingList:
     def is_empty(self) -> bool:
         return self.items == []
 
-    def push(self, item) -> None:
+    def append(self, item) -> None:
         with self.lock_object:
             self.items.append(item)
 
-    def pop(self) -> object:
+    def remove(self) -> object:
         with self.lock_object:
             return self.items.pop()
 

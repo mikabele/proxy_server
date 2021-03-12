@@ -74,7 +74,8 @@ class ProxyServer:
                     self.__cached_requests.remove((request, cached_place, info))
                     break
             if not contains_requested_place:
-                del self.__cached_requests[0]
+                # index = del self.__cached_requests[0]
+                self.__cached_requests.__delitem__(0)
         self.__cached_requests.append((request, requested_place, request_info))
 
     def get_cached_request(self, request: str, requested_place: str) -> object:
