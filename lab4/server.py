@@ -4,7 +4,6 @@ import os
 import dotenv
 import configparser
 from concurrent.futures import ThreadPoolExecutor
-import time
 import LockingList
 
 
@@ -96,7 +95,7 @@ class ProxyServer:
     def __init__(self):
         self.load_settings()
         self.__threads_pool = ThreadPoolExecutor(self.__threads_count)
-        self.__cached_requests = list()
+        self.__cached_requests = LockingList.LockingList()
 
 
 if __name__ == "__main__":
