@@ -57,7 +57,6 @@ class ProxyServer:
     def process_client_query(self, client_socket: socket.socket, client_address: str) -> None:
         with client_socket:
             request, args = self.get_request_params(client_socket.recv(1024).decode("utf-8"))
-            time.sleep(5)
             requested_result = self.handle_request(request, args)
             client_socket.sendall(bytes(self.get_sending_str(requested_result), encoding="UTF-8"))
 
