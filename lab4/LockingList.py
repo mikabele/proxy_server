@@ -21,8 +21,8 @@ class LockingList:
         with self.lock_object:
             return self.items.remove(item)
 
-    def peek(self) -> object:
-        return self.items[-1]
+    def top(self) -> object:
+        return self.items[0]
 
     def size(self) -> int:
         return len(self.items)
@@ -33,12 +33,6 @@ class LockingList:
     def __delitem__(self, key) -> bool:
         with self.lock_object:
             return self.__delitem__(key)
-
-    def __iter__(self):
-        return self.items.__iter__()
-
-    def __len__(self):
-        return len(self.items)
 
     def __iter__(self):
         return self.items.__iter__()

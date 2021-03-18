@@ -1,7 +1,7 @@
 import asyncio
 import configparser
 
-import LockingList
+from LockingList import LockingList
 from handlers import RequestHandler
 
 from handlers import WeatherHandler
@@ -9,7 +9,7 @@ from handlers import WeatherHandler
 
 class ProxyServer:
     __cache_size: int = None
-    __cached_requests: dict[str, LockingList.LockingList] = None
+    __cached_requests: dict[str, LockingList] = None
     __threads_count: int = None
     __HOST: str = None
     __PORT: int = None
@@ -39,19 +39,19 @@ class ProxyServer:
     async def get_request_params(self, request_str: str) -> tuple[str, str, dict[str, str]]:
         main_info = request_str.split("\n")[0]
         params_str = main_info.split(" ")[1]
-        handler, other_params = params_str.split("/")
+        handler, other_params = params_str[1:].split("/")
         func, args = other_params.split("?")
-        func = func[1:]
         args_dict = dict([pair.split("=") for pair in args.split("&")])
         return handler, func, args_dict
 
     async def handle_request(self, request: str) -> object:
+        await asyncio.sleep(5)
         handler, func, args = await self.get_request_params(request)
         requested_result = await self.get_cached_request(handler, func, args)
         if not requested_result:
             print("not from cached requests")
             result = await self.__request_handlers[handler].handle_request(func, args)
-            if not result:
+            if result is None:
                 return "Error: invalid request"
             requested_result = result
             await self.cache_request(handler, func, args, requested_result)
@@ -69,15 +69,15 @@ class ProxyServer:
 
     async def write_result(self, writer: asyncio.StreamWriter, result: object) -> None:
         sending_str = await self.get_sending_str(result)
-        writer.write(sending_str)
+        writer.write(bytearray(sending_str, encoding="UTF-8"))
         await writer.drain()
         writer.close()
 
-    async def get_sending_str(self, requested_result: object) -> bytearray:
-        return bytearray("HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
-            requested_result) + "</body></html>\n")
+    async def get_sending_str(self, requested_result: object) -> str:
+        return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
+            requested_result) + "</body></html>\n"
 
-    async def read_request(self, reader: asyncio.StreamReader) -> str:
+    async def read_request(self, reader: asyncio.StreamReader, delimiter=b'\r\n\r\n') -> str:
         request = bytearray()
         while True:
             chunk = await reader.read(4)
@@ -85,30 +85,32 @@ class ProxyServer:
                 # client disconnected prematurely
                 break
             request += chunk
-        return request.decode("UTF-8")
+            # print(request)
+            if delimiter in request:
+                return request.decode("UTF-8")
 
-    async def cache_request(self, request: str, func: str, args: dict(), request_info: object) -> None:
+    async def cache_request(self, request: str, func: str, args: dict, request_info: object) -> None:
         func_and_args_str = func + str(args)
-        if request in self.__cached_requests:
-            if len(self.__cached_requests) == self.__cache_size:
-                contains_func_and_args_str = False
-                for cached_func_and_args_str, cached_info in self.__cached_requests[request]:
-                    if func_and_args_str == cached_func_and_args_str:
-                        contains_func_and_args_str = True
-                        self.__cached_requests[request].remove((func_and_args_str, request_info))
-                        break
-                if not contains_func_and_args_str:
-                    del self.__cached_requests[request][0]
-            self.__cached_requests.append((request, func_and_args_str, request_info))
-        else:
-            self.__cached_requests[request] = (func_and_args_str, request_info)
+        # if func_and_args_str not in self.__cached_requests[request]:
+        if len(self.__cached_requests[request]) == self.__cache_size:
+            contains_func_and_args_str = False
+            for cached_func_and_args_str, cached_info in self.__cached_requests[request]:
+                if func_and_args_str == cached_func_and_args_str:
+                    contains_func_and_args_str = True
+                    self.__cached_requests[request].remove((func_and_args_str, request_info))
+                    break
+            if not contains_func_and_args_str:
+                self.__cached_requests[request].remove(self.__cached_requests[request].top())
+        self.__cached_requests[request].append((func_and_args_str, request_info))
+        # else:
+        # self.__cached_requests[request].append((func_and_args_str, request_info))
 
-    async def get_cached_request(self, request: str, func: str, args: str) -> object:
+    async def get_cached_request(self, request: str, func: str, args: dict) -> object:
         func_and_args_str = func + str(args)
-        if request in self.__cached_requests:
-            for cached_func_and_args_str, info in self.__cached_requests[request]:
-                if cached_func_and_args_str == func_and_args_str:
-                    return info
+        # if request in self.__cached_requests:
+        for cached_func_and_args_str, info in self.__cached_requests[request]:
+            if cached_func_and_args_str == func_and_args_str:
+                return info
 
     async def run_server(self):
         server = await asyncio.start_server(self.process_client, self.__HOST, self.__PORT)
@@ -116,7 +118,9 @@ class ProxyServer:
 
     def __init__(self):
         self.load_settings()
+        self.__request_handlers = dict()
         self.load_handlers()
+        self.__cached_requests = {x.__classname__: LockingList() for x in self.__request_handlers.values()}
 
 
 if __name__ == "__main__":
