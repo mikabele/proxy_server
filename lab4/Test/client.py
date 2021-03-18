@@ -23,21 +23,14 @@ class Client:
                 executor.submit(
                     lambda: requests.get(myurl))
                 for myurl in myurls]
+<<<<<<< HEAD:lab4/urllib_client.py
 
         results = [f.result().status_code for f in futures]
+=======
+>>>>>>> 5d4b5cbeb61a631e8586cddc78dbe8718fc66a9e:lab4/Test/client.py
 
+        results = [f.result().status_code for f in futures]
         print("Results: %s" % results)
-        # responses = []
-        # data = []
-        # for myurl in myurls:
-        #     data.append(urllib.request.urlopen(myurl).read())
-        #
-        # # Output from the GET assuming response code was 200
-        # # for response in responses:
-        # #     data.append(response.read())
-        #
-        # for row in data:
-        #     print(row)
 
     def __init__(self):
         self.load_settings()
