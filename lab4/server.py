@@ -82,25 +82,27 @@ class ProxyServer:
             request += chunk
         return request.decode("UTF-8")
 
-    async def cache_request(self, request: str, requested_place: str, request_info: object) -> None:
+    async def cache_request(self, request: str, func: str, args: dict(), request_info: object) -> None:
+        func_and_args_str = func + str(args)
         if request in self.__cached_requests:
             if len(self.__cached_requests) == self.__cache_size:
-                contains_requested_place = False
-                for cached_place, cached_info in self.__cached_requests[request]:
-                    if requested_place == cached_place:
-                        contains_requested_place = True
-                        self.__cached_requests[request].remove((requested_place, request_info))
+                contains_func_and_args_str = False
+                for cached_func_and_args_str, cached_info in self.__cached_requests[request]:
+                    if func_and_args_str == cached_func_and_args_str:
+                        contains_func_and_args_str = True
+                        self.__cached_requests[request].remove((func_and_args_str, request_info))
                         break
-                if not contains_requested_place:
+                if not contains_func_and_args_str:
                     del self.__cached_requests[request][0]
-            self.__cached_requests.append((request, requested_place, request_info))
+            self.__cached_requests.append((request, func_and_args_str, request_info))
         else:
-            self.__cached_requests[request] = (requested_place, request_info)
+            self.__cached_requests[request] = (func_and_args_str, request_info)
 
-    async def get_cached_request(self, request: str, requested_place: str) -> object:
+    async def get_cached_request(self, request: str, func: str, args: str) -> object:
+        func_and_args_str = func + str(args)
         if request in self.__cached_requests:
-            for place, info in self.__cached_requests[request]:
-                if requested_place == place:
+            for cached_func_and_args_str, info in self.__cached_requests[request]:
+                if cached_func_and_args_str == func_and_args_str:
                     return info
 
     async def run_server(self):
