@@ -8,7 +8,7 @@ import urllib.request
 class Client:
     __HOST: str = None
     __PORT: int = None
-    cities = ["Moscow", "Minsk", "London", "Kiev"]
+    cities = ["Moscow", "Minsk", "London","Kiev"]
 
     def load_settings(self):
         configs = configparser.ConfigParser()
@@ -21,10 +21,10 @@ class Client:
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             futures = [
                 executor.submit(
-                    lambda: urllib.request.urlopen(f"http://{self.__HOST}:65432/temperature?city={city}").read())
-                for city in self.cities]
+                    lambda: requests.get(myurl))
+                for myurl in myurls]
 
-        results = [f.result() for f in futures]
+        results = [f.result().status_code for f in futures]
 
         print("Results: %s" % results)
         # responses = []
