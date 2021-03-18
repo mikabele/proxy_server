@@ -8,26 +8,21 @@ import urllib.request
 class Client:
     __HOST: str = None
     __PORT: int = None
-    cities = ["Moscow", "Minsk", "London","Kiev"]
+    cities = ["Moscow", "Minsk", "London","Kiev","Hello"]
 
     def load_settings(self):
         configs = configparser.ConfigParser()
-        configs.read("Configs/configs.ini")
+        configs.read("../Configs/configs.ini")
         self.__HOST = configs["client"]["host"]
         self.__PORT = int(configs["client"]["port"])
 
     def integration_test(self):
-        myurls = [f"http://{self.__HOST}:65432/temperature?city={city}" for city in self.cities]
+        myurls = [f"http://{self.__HOST}:65432/weather/temperature?city={city}" for city in self.cities]
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             futures = [
                 executor.submit(
                     lambda: requests.get(myurl))
                 for myurl in myurls]
-<<<<<<< HEAD:lab4/urllib_client.py
-
-        results = [f.result().status_code for f in futures]
-=======
->>>>>>> 5d4b5cbeb61a631e8586cddc78dbe8718fc66a9e:lab4/Test/client.py
 
         results = [f.result().status_code for f in futures]
         print("Results: %s" % results)
