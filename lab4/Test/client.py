@@ -8,7 +8,7 @@ import urllib.request
 class Client:
     __HOST: str = None
     __PORT: int = None
-    cities = ["Moscow", "Minsk", "London","Kiev","Hello"]
+    cities = ["Moscow", "Minsk", "London", "Kiev", "Hello"]
 
     def load_settings(self):
         configs = configparser.ConfigParser()

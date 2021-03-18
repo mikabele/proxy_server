@@ -24,16 +24,6 @@ class ProxyServer:
         self.__threads_count = int(configs["server"]["threads_count"])
 
     def load_handlers(self):
-        # for handler_file in glob.iglob("handlers/*.py"):
-        #     print(handler_file)
-        #     with open(handler_file) as handler:
-        #         file_content = handler.read()
-        #         p = ast.parse(file_content)
-        #         classes = [node.name for node in ast.walk(p) if isinstance(node, ast.ClassDef)]
-        #         for classname in classes:
-        #             print(getattr(sys.modules["handlers"],classname+".py"))
-        #             #self.__request_handlers[classname]
-        # print(self.__request_handlers)
         self.__request_handlers[WeatherHandler.WeatherHandler.__classname__] = WeatherHandler.WeatherHandler()
 
     async def get_request_params(self, request_str: str) -> tuple[str, str, dict[str, str]]:
@@ -91,7 +81,6 @@ class ProxyServer:
 
     async def cache_request(self, request: str, func: str, args: dict, request_info: object) -> None:
         func_and_args_str = func + str(args)
-        # if func_and_args_str not in self.__cached_requests[request]:
         if len(self.__cached_requests[request]) == self.__cache_size:
             contains_func_and_args_str = False
             for cached_func_and_args_str, cached_info in self.__cached_requests[request]:
@@ -102,12 +91,9 @@ class ProxyServer:
             if not contains_func_and_args_str:
                 self.__cached_requests[request].remove(self.__cached_requests[request].top())
         self.__cached_requests[request].append((func_and_args_str, request_info))
-        # else:
-        # self.__cached_requests[request].append((func_and_args_str, request_info))
 
     async def get_cached_request(self, request: str, func: str, args: dict) -> object:
         func_and_args_str = func + str(args)
-        # if request in self.__cached_requests:
         for cached_func_and_args_str, info in self.__cached_requests[request]:
             if cached_func_and_args_str == func_and_args_str:
                 return info
