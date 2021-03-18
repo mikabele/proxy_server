@@ -83,21 +83,25 @@ class ProxyServer:
         return request.decode("UTF-8")
 
     async def cache_request(self, request: str, requested_place: str, request_info: object) -> None:
-        if len(self.__cached_requests) == self.__cache_size:
-            contains_requested_place = False
-            for cached_request, cached_place, info in self.__cached_requests:
-                if cached_request == request and requested_place == cached_place:
-                    contains_requested_place = True
-                    self.__cached_requests.remove((request, cached_place, info))
-                    break
-            if not contains_requested_place:
-                del self.__cached_requests[0]
-        self.__cached_requests.append((request, requested_place, request_info))
+        if request in self.__cached_requests:
+            if len(self.__cached_requests) == self.__cache_size:
+                contains_requested_place = False
+                for cached_place, cached_info in self.__cached_requests[request]:
+                    if requested_place == cached_place:
+                        contains_requested_place = True
+                        self.__cached_requests[request].remove((requested_place, request_info))
+                        break
+                if not contains_requested_place:
+                    del self.__cached_requests[request][0]
+            self.__cached_requests.append((request, requested_place, request_info))
+        else:
+            self.__cached_requests[request] = (requested_place, request_info)
 
     async def get_cached_request(self, request: str, requested_place: str) -> object:
-        for cached_request, place, info in self.__cached_requests:
-            if requested_place == place and cached_request == request:
-                return info
+        if request in self.__cached_requests:
+            for place, info in self.__cached_requests[request]:
+                if requested_place == place:
+                    return info
 
     async def run_server(self):
         server = await asyncio.start_server(self.proccess_client, self.__HOST, self.__PORT)
