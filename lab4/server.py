@@ -1,25 +1,19 @@
-import socket
-import requests
-import os
-import dotenv
-import configparser
-from concurrent.futures import ThreadPoolExecutor
-import LockingList
-import time
 import asyncio
-import sys
-from RequestHandler import RequestHandler
+import configparser
+
+import LockingList
+from handlers import RequestHandler
+
+from handlers import WeatherHandler
 
 
 class ProxyServer:
-    __api_key: str = None
     __cache_size: int = None
     __cached_requests: dict[str, LockingList.LockingList] = None
-    __threads_pool: ThreadPoolExecutor = None
     __threads_count: int = None
     __HOST: str = None
     __PORT: int = None
-    __request_handlers: dict[str, RequestHandler] = None
+    __request_handlers: dict[str, RequestHandler.RequestHandler] = None
 
     def load_settings(self):
         configs = configparser.ConfigParser()
@@ -28,8 +22,19 @@ class ProxyServer:
         self.__PORT = int(configs["server"]["port"])
         self.__cache_size = int(configs["server"]["cache_size"])
         self.__threads_count = int(configs["server"]["threads_count"])
-        dotenv.load_dotenv(".env")
-        self.__api_key = os.environ.get("api_key")
+
+    def load_handlers(self):
+        # for handler_file in glob.iglob("handlers/*.py"):
+        #     print(handler_file)
+        #     with open(handler_file) as handler:
+        #         file_content = handler.read()
+        #         p = ast.parse(file_content)
+        #         classes = [node.name for node in ast.walk(p) if isinstance(node, ast.ClassDef)]
+        #         for classname in classes:
+        #             print(getattr(sys.modules["handlers"],classname+".py"))
+        #             #self.__request_handlers[classname]
+        # print(self.__request_handlers)
+        self.__request_handlers[WeatherHandler.WeatherHandler.__classname__] = WeatherHandler.WeatherHandler()
 
     async def get_request_params(self, request_str: str) -> tuple[str, str, dict[str, str]]:
         main_info = request_str.split("\n")[0]
@@ -45,11 +50,11 @@ class ProxyServer:
         requested_result = await self.get_cached_request(handler, func, args)
         if not requested_result:
             print("not from cached requests")
-            result = self.__request_handlers[handler].handle_request(func, args)
+            result = await self.__request_handlers[handler].handle_request(func, args)
             if not result:
                 return "Error: invalid request"
             requested_result = result
-            await self.cache_request(handler, requested_result, args)
+            await self.cache_request(handler, func, args, requested_result)
         else:
             requested_result = requested_result
         return requested_result
@@ -100,13 +105,12 @@ class ProxyServer:
                 return info
 
     async def run_server(self):
-        server = await asyncio.start_server(self.proccess_client, self.__HOST, self.__PORT)
+        server = await asyncio.start_server(self.process_client, self.__HOST, self.__PORT)
         await server.serve_forever()
 
     def __init__(self):
         self.load_settings()
-        self.__threads_pool = ThreadPoolExecutor(self.__threads_count)
-        self.__cached_requests = LockingList.LockingList()
+        self.load_handlers()
 
 
 if __name__ == "__main__":
