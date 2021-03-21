@@ -1,8 +1,6 @@
-import socket
 import configparser
 import requests
 import concurrent.futures
-import urllib.request
 
 
 class Client:
