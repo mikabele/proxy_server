@@ -59,7 +59,7 @@ class ProxyServer:
         await writer.drain()
         writer.close()
 
-    def get_sending_str(self, requested_result: RequestResult) -> str:
+    def __get_sending_str(self, requested_result: RequestResult) -> str:
         return "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<html><body>" + str(
             requested_result) + "</body></html>\n"
 

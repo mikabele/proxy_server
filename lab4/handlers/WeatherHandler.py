@@ -25,7 +25,6 @@ class WeatherHandler(RequestHandler):
         req = eval(req.content)['current']
         if func not in req.keys():
             return None
-
         return RequestResult(req[func])
 
     def __init__(self):
