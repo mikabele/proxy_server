@@ -1,8 +1,8 @@
 import requests
 import os
 import dotenv
-import grequests
 
+import httpx
 from lab4.handlers.RequestHandler import RequestHandler
 from lab4.RequestResult import RequestResult
 
@@ -19,10 +19,13 @@ class WeatherHandler(RequestHandler):
         if "city" not in args.keys():
             return None
         params = dict(access_key=self.__api_key, query=args["city"])
-        # сделать асинхронным
-        req = grequests.get(url="http://api.weatherstack.com/current", params=params).json()["current"]
+        client = httpx.AsyncClient()
+        req = await client.get(url="http://api.weatherstack.com/current", params=params)
+        await client.aclose()
+        req = eval(req.content)['current']
         if func not in req.keys():
             return None
+
         return RequestResult(req[func])
 
     def __init__(self):
