@@ -19,10 +19,7 @@ class WeatherHandler(RequestHandler):
         if "city" not in args.keys():
             return None
         params = dict(access_key=self.__api_key, query=args["city"])
-        print(self.__api_key)
         req = await self.__client.get(url="http://api.weatherstack.com/current", params=params)
-        await self.__client.aclose()
-        print(req.content)
         req = eval(req.content)['current']
         if func not in req.keys():
             return None
