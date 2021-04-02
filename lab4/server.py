@@ -9,7 +9,6 @@ from RequestParams import RequestParams
 from handlers.WeatherHandler import WeatherHandler
 
 
-
 class ProxyServer:
 
     def __load_settings(self):
@@ -35,7 +34,6 @@ class ProxyServer:
         args = params.get_args()
         requested_result = self.__get_cached_request(handler, func, args)
         if not requested_result:
-            print("not from cached requests")
             result = await self.__request_handlers[handler].handle_request(func, args)
             if result is None:
                 return "Error: invalid request"
@@ -47,14 +45,12 @@ class ProxyServer:
 
     async def __process_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         request = await self.__read_request(reader)
-        if request is None:
-            print("Client unexpectedly disconnected")
-        else:
+        if request is not None:
             result = await self.__handle_request(request)
             await self.__write_result(writer, result)
 
     async def __write_result(self, writer: asyncio.StreamWriter, result: RequestResult) -> None:
-        sending_str = self.get_sending_str(result)
+        sending_str = self.__get_sending_str(result)
         writer.write(bytearray(sending_str, encoding="UTF-8"))
         await writer.drain()
         writer.close()
@@ -68,7 +64,6 @@ class ProxyServer:
         while True:
             chunk = await reader.read(4)
             if not chunk:
-                # client disconnected prematurely
                 break
             request += chunk
             if delimiter in request:
@@ -84,7 +79,7 @@ class ProxyServer:
                     self.__cached_requests[request].remove((func_and_args_str, request_info))
                     break
             if not contains_func_and_args_str:
-                del self.__cached_requests[request][0]
+                self.__cached_requests[request].popleft()
         self.__cached_requests[request].append((func_and_args_str, request_info))
 
     def __get_cached_request(self, request: str, func: str, args: dict) -> RequestResult:
